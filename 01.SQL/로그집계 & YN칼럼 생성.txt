@@ -1,0 +1,44 @@
+■ 조건별 로그 집계 / 여부칼럼 생성
+-- 로그집계 : (1) 체류시간 2초 이상 사용로그 추출
+-- 로그집계 : (2) 부문별 PV/UV 집계 필요 (각 상황별 로그 수집 기준은 규격서를 통해 전달 필요)
+-- 여부칼럼 : 디즈니 관련 정규상품 & 부가서비스상품 가입자 한정
+-- 		  SVC_DV_NM     : 고객이 가입한 정규상품 	(그룹핑해놓은 칼럼) 
+-- 		  VAS_SVC_DV_NM : 고객이 가입한 부가서비스상품 (그룹핑해놓은 칼럼)
+
+
+-- P_YYYYMMDD = 파티션키 : YYYYMMDD
+-- LOG_TIME   = 로그일시 : YYYYMMDDHHMMSS
+
+
+SELECT P_YYYYMMDD
+	,  COUNT ( 		    CASE WHEN ACT_DTL IN ('0001', '0002') AND ACT_CURR = 'T123' THEN 1 	  	  		 END)   AS 시청_PV	-- 시청 로그 조건 반영
+	,  SUM   ( 		    CASE WHEN ACT_DTL IN ('0001', '0002') AND ACT_CURR = 'T123' THEN ACT_DTL8 ELSE 0 END)   AS 시청시간	    -- 시청 로그 조건 반영
+	,  COUNT ( DISTINCT CASE WHEN ACT_DTL IN ('0000') 							    THEN ENTR_NO 		 END) 	AS 진입_UV	-- 진입 로그 조건 반영 (시작버튼 클릭)
+	,  COUNT ( 		    CASE WHEN ACT_DTL IN ('0003')		 					    THEN 1				 END) 	AS 이탈_PV	-- 이탈 로그 조건 반영 (종료버튼 클릭)
+	,  COUNT ( 		    CASE WHEN ACT_DTL IN ('0003')		 					    THEN ACT_DTL8 ELSE 0 END)	AS 클릭횟수(PV)	-- 이탈 로그 조건 반영 (종료버튼 클릭)
+FROM (
+		SELECT ENTR_NO
+			,  ACT_DTL
+			,  ACT_CURR
+			,  ACT_DTL8 -- ACT_DTL : '0001','0002' & ACT_CURR : 'T123' 인 경우 "시청"으로 정의하며, 
+			            --            해당 시나리오에  ACT_DTL8 칼럼에 컨텐츠 시청시간(초) 가 적재됨
+						-- ACT_DTL : '0003' 인 경우 "이탈"로 정의하며, 
+						--            해당 시나리오에 ACT_DTL8 칼럼에 컨텐츠 클릭 횟수(진입-이탈까지의 로그중 컨텐츠 클릭 횟수 집계)가 적재됨
+		FROM (
+				SELECT ENTR_NO
+					,  ACT_DTL
+					,  ACT_CURR 
+					,  ACT_DTL8
+					,  LOG_TIME
+					,  LEAD(LOG_TIME) OVER (PARTITION BY SID ORDER BY LOG_TIME) AS NEXT_LOG_TIME
+					,  CASE WHEN SUM(IF( SVC_DV_NM = '디즈니' OR VAS_SVC_DV_NM ='디즈니' ,1,0)) >0 THEN 'Y' ELSE 'N' AS DISNEY_ENTR_YN -- 디즈니가입여부 (디즈니관련 상품/부가서비스 사용중인 고객만 필터링 필요)
+				FROM PROJECT.DATATSET.LOGTB 
+				WHERE 1=1
+				AND FORMAT_DATE('%Y%m%d', P_YYYYMMDD) = SAFE_CAST(SUBSR(LOG_TIME,1,8) AS STRING) -- 파싱에러 방어
+			  )
+		WHERE 1=1																				   	
+		AND TIME_DIFF(PARSE_TIME('%H%M%S',SUBSTR(NEX_LOGTIME,9,6)), PARSE_TIME('%H%M%S',SUBSTR(LOG_TIME,9,6)),SECOND) >= 2 -- 체류시간 2초 이상 로그
+		AND DISNEY_ENTR_YN = 'Y' --디즈니가입고객만 필터링
+	)
+GROUP BY 1
+

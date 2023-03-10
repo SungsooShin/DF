@@ -1,0 +1,27 @@
+-- ■ GCS -> BQ External table 연동
+
+-- 파티션이 있는 경우
+CREATE EXTERNAL TABLE PROJECT.DATASET.EX_TB
+WITH PARTITION COLUMNS
+(
+	P_YYYYMM integer
+)
+OPTIONS (
+			FORMAT = 'CSV'
+		  , uris = ['gs://bucket-projectpath/datasetpath/EX_TB/*]
+		  , hive_partition_uri_prefix='gs://bucket-projectpath/datasetpath/EX_TB'
+		 )
+-- 파티션이 없는 경우
+CREATE EXTERNAL TABLE PROJECT.DATASET.EX_TB
+OPTIONS (
+			FORMAT = 'CSV'
+		  , uris = ['gs://bucket-projectpath/datasetpath/EX_TB/*]
+		 )
+		 
+-- 콘솔 기능 이용 
+/*
+(1) 엑셀이용, 파이프이용하여 모든 행을 한칼럼으로 엮기 ( = A1&"|"&B1&"|"&C1 .... )
+(2) 한글 깨질시 UTF8 변환, csv파일로 저장
+(3) BQ 콘솔 이용하여 테이블 생성 (자동스키마 감지 : 어지간하면 DDL타입이 올바르게 들어가나, 깨질시 수동으로 지정 
+                         / 세부옵션에 행 구분은 파이프로 설정)
+*/		 

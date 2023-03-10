@@ -1,0 +1,4 @@
+select *
+from project1.SCHEMA_A.HM_ENTR_MNTH_S AS A
+LEFT OUTER join project2.SCHEMA_B.MBL_ENTR_MNTH_S B
+ON A.P_YYYYMM = B.P_YYYYMM

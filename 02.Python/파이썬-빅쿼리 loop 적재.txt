@@ -1,0 +1,31 @@
+파이썬 - 빅쿼리 연동 (for문 적재)
+
+1. 구글 권한 인증 (json파일로 인증할경우)
+import google.auth
+credentials, proect_id = google.auth.load_credentials_from_file(filename = 'json크레딧코드')
+
+2. 빅쿼리 패키지 임포트
+from google.cloud import bigquery 
+
+3. 프로젝트, 클라이언트 정의
+project = "프로젝트명"
+client = bigquery.Cilent(project = project, credentials = credentials)
+
+■ 적재
+import pandas as pd
+import time 		  -- strftime (문자열->날짜변환) 활용하기 위한 패키지
+from tqdm import tqdm -- 파이썬 진행현황을 보여주는 패키지
+
+dt_index = pd.date_range(start = '20210101', end = '20211231') #일/월에 따라 포맷 조정
+dt_list = dt_index.strftime("%Y%m%d").tolist()				   #일/월에 따라 포맷 조정
+dt_uniq = set(dt_list)
+
+insert_sql = '''
+#쿼리입력
+'''
+
+for dt in tqdm(dt_uniq):
+	insert_sql = insert_sql.replace('#YYYYMMDD#', dt)  #현재경우 적재 파라미터가 #YYYYMMDD#
+	df = client.query(insert_sql).to_dataframe() #빅쿼리는 한번에 20개까지 sql만 호출 가능
+	# --> 따라서 적재 중 에러를 방지하기 위해, 한 세션이 끝나고 다음 세션이 시작 되도록 중간에 dataframe으로 저장하는 작업을 추가 (저장 완료 되어야 다음 반복문 실행) 
+    # time.sleep(10) 적재시간을 고려하여, 적절한 time.sleep (대기시간)을 설정하는것도 방법중 하나임 

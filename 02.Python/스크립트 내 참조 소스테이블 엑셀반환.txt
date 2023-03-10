@@ -1,0 +1,109 @@
+■ 스크립트를 올려서, 사용중인 원천테이블 전체를 엑셀로 반환
+
+import os # 경로지정 패키지
+import re # 정규표현식패키지
+import pandas as pd
+
+#경로 설정 및 파일목록(list) 생성
+load_path = './sql/' 				#sql소스 올리는 폴더명을 'sql' 로 생성하였음
+file_list = os.listdir(load_path) 	#
+file_list.remove('.jpynb_checkpoints')
+
+
+# complie
+# 데이터셋의 경우 SCHEMA_A, SCHEMA_B, SCHEMA_C 스키마로 구성되어있음
+# 프로젝트의 경우 project1,project2참조
+
+find_line1 = re.compile('.*FROM project1.SCHEMA.[A-Z]+..* *')
+find_line2 = re.compile('.*JOIN project1.SCHEMA.[A-Z]+..* *')
+fine_line3 = re.compile('.*FROM project2.SCHEMA.[A-Z]+..* *')
+find_line4 = re.compile('.*JOIN project2.SCHEMA.[A-Z]+..* *')
+find_source1 = re.compile('prject1.SCHEMA.[A-Z]+..* *')
+find_source2 = re.compile('prject2.SCHEMA.[A-Z]+..* *')
+
+>> 공백이아닌 문자나숫자 \S
+
+
+#TEST 실행
+
+script = 'SSS_MMLY_H.sql' #스크립트명
+f = open(load_path + sql, 'r') #읽기모드로 스크립트 오픈
+lines = f.read().replace('\xa0','').replace('from,'FROM').replace('join','JOIN') #줄바꿈공백 제거 및 혹시모를 FROM, JOIN 문자 대문자화
+
+# 줄바꿈공백 방어로직 적용
+
+source_line = find_line1.findall(lines) + find_line2.findall(lines) + find_line3.findall(lines) + find_line4.findall(lines)
+join_source = ''.join(source_line)
+temp_source = join_source.replace( ')' , '').replace('\xa0', '\t').replace('','\t').replace('\t'.'\n')
+source = find_source1.findall(temp_source) + find_source2.findall(temp_source)
+
+
+# TEST 리턴
+
+final_source = []
+for i in source:
+	if i not in final_source:
+		final_source.append(i)
+
+for i in source:
+	print(i)
+
+
+#실제 실행
+source_list = []
+
+for script in file_list:
+	with open(load_path + script, 'r') as f:
+		lines = f.read().replace('\xa0','').replace('from','FROM').replace('join','JOIN')
+		source_line = find_line1.findall(lines) + find_line2.findall(lines) + find_line3.findall(lines) + find_line4.findall(lines)
+		join_source = ''.join(source_line)
+		temp_source = join_source.replace( ')', '').replace('', '\t').replace('\t', '\n')
+		source = find_source1.findall(temp_source) + find_source2.findall(temp_source)
+		source = list(set(source))
+		
+		for i in source:
+			source_list.append([script,i])
+
+df = pd.DataFrame(source_list)
+df.columns = ['파일명','원천']
+
+
+#데이터프레임 생성
+df['타입'] = df['파일명'].apply(lambda x: 'TABLE' if x.startwith('P') else 'VIEW') # TABLE (무조건 P_BAT_000_00_테이블명) , VIEW : (그냥 테이블명) 
+df['타겟스키마'] = 'sss_project.sss_schema'
+df['타겟테이블명'] = df['파일명'].apply(lambda x: x.replace('.sql','')[13:] if x.startwith('P') else x.replace('.sql',''))
+df['원천스키마'] = df['원천'].apply(lambda x: x.split('.')[0] + '.' + x.split('.')[1])
+df['원천테이블명'] = df['원천'].apply(lambda x: x.splipt('.')[2])
+df
+
+#저장
+df.to_csv('./참조원천리스트.csv')
+
+
+■ 원천 테이블 전수조사 (간편Ver)
+
+#PWD #경로확인
+import os # 경로지정 패키지
+import re # 정규표현식패키지
+
+load_path = './sql/' 	 #경로단순화
+file_list = os.listdir(load_path) #os의 loadpath 경로 내의 파일명을 리스트로 반환
+
+source_fnl = []
+
+source_fnl = []
+
+for i in file_list:
+	f = open(load_path + i, 'r')   					 #파일열기 (r:읽기모드)
+	lines = f.readlines()		 					 #라인별 리스트 추출 (스크립트 내 행 별로 내용 배열)
+	match = [s for s in lines if "project" in s] 				 # 프로젝트이름이 포함되어있는 줄(원소)만 추출
+	match_str = '|'.join(match) 		   				 # 한줄의 string형태 다시 변환 (findall 함수는 string형만 적용 가능하기 때문)
+	re_nm = re.compile('project[0-9].SCHEMA.[A-Z]*\S*')			 # 정규표현식 지정,  정규식 객체를 리턴, \S : 공백이 하나의 문자
+	re_nm.findall(match_str) 						 # string -> list 반환 (정규식에 해당하는 것들만)
+	source_fnl.extend(re_nm.findall(match_str))		 		 # 소스테이블 목록들을 append
+	f.close()
+source_fnl = set(source_fnl) 						 # 중복 제거
+
+
+for i in source_fnl:						 	 # 리턴
+	print(i)

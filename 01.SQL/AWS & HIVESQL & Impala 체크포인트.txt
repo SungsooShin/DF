@@ -1,0 +1,45 @@
+-- ■ HIVE SQL / Athena (AWS)
+
+-- 1. Internal table vs External table
+-- 테이블 생성시, 데이터 물리 경로는 디폴트 위치에 저장됨
+-- 메타스토어와 데이터가 동기화 되어있기 때문에, DROP PARTITION시 자동으로 데이터도 삭제됨
+-- 빅쿼리에서 GCS 연동할때도 External table 활용 가능 
+
+-- 2. External
+-- 파일이 S3/HDFS등 원격위치에 있고, 그것을 참조하는 경우의 테이블
+-- 메트스토어와 데이터가 (테이블, 파티션 간)동기화되어있지 않기 때문에 테이블스키마에서 DROP PARTITION시 데이터는 자동으로 삭제가 안됨 (AWS의 경우 S3에서 지워야주어야함)
+/* S3 또는 HDFS에 파티션을 추가해준다고 메타스토어에 반영되지 않기 때문에, 만일 파일저장소에 신규 데이터가 수집되었을 경우
+   MSCK REPAIR TABLE TB_NM 구문을 활용하여 메타스토어를 동기화시켜주는 작업이 필요 */
+   
+   만일 마트가 External table이고, 칼럼을 한개 추가하려고 alter table add column을 할 경우, 마찬가지로 테이블메타스토어와 파티션메타스토어의 SINK가 맞지 않는 이슈가 발생함.
+   ALTER TABLE dbname.table_name ADD columns (column1 string,column2 string) CASCADE; 
+   CASCADE 조건 추가시, 테이블메타의 변경과 그에 물려있는 파티션메타를 한번에 수정 가능함.    
+
+-- 추가
+   Athena에서는 Delete DML이 실행되지 않기 때문에, S3에서 콘솔을 활용해 파티션을 제거하거나, ALTER TABLE DROP PARTITION 구문을 활용해야함 
+   
+   
+   
+-- ■ Cloudera Impala 
+/*
+DB Connection pool
+한번 쿼리를 날리면, DB서버에 연결을 시도하고 쿼리 결과 리턴 후 연결을 다시 끊는 절차가 있다.
+이 과정에 리소스가 많이 소요되기 때문에 Connection pool을 이용하여,
+DB 사용 전단계에 할당된 커넥션을 미리 POOL에 올려두고 사용자가 사용하는 구조를 활용한다
+
+[코드]
+SET REQUEST_POOL = 'ROOT.과제코드'
+SET REQUEST_POOL = '과제코드'
+*/ 
+
+
+
+/*
+승인제어 
+임팔라는 승인제어 기능이 있어서, 메모리 부족 상황을 방지하기 위해 리소스 사용량을 제한해둔다.
+사용자별로 메모리제한이 있어서, 무거운 쿼리를 실행할경우 쿼리를 강제로 취소해버리는 경우가 있다.
+해당 경우에 메모리 제한을 러프하게 변경하기 위한 코드  
+
+[코드]
+SET MEM_LIMIT '5.2G' 
+*/

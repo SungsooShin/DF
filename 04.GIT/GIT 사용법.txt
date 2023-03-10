@@ -1,0 +1,50 @@
+-- Git 사용 가이드
+
+■ GIT 초기 설정
+1) Git bash 설치
+2) 로컬폴더 생성 (D드라이브)
+3) 우클릭 -> bash here
+
+4) 깃폴더 설정 : git init 
+5) 리포지토리 연결 : git remote add origin 'URL주소' (깃랩 코드복사)
+--git remote -v : 리포지토리 연동 확인
+6) 사용자정보 입력
+-- git config --global user.name "Sungsoo Shin"
+-- git config --global user.email "sss477@gmail.com"
+
+■ GIT 활용
+1. 사본 생성
+-- git clone 'URL주소' (깃랩 코드복사)
+-- 클론 : 리포지토리 사본 생성 ( PULL 받아도 무관 ) PULL : git pull origin main
+2. 경로 이동 ( 리모트URL 시작경로와 SINK가 맞지 않을 경우 )
+-- 터미널 : cd ./DF 입력
+-- 혹은, git bash 종료 후, DF 폴더에서 다시 bash here 클릭
+
+3. 소스 스크립트 수정 
+4. 새 브랜치 생성 
+-- git checkout -b sss_test
+
+5. add (스테이지필드에 작업분 load)
+-- git add .   : 전체 바영
+-- git add 파일명 : 해당 파일1건만 반영
+-- git status   : add 후 어떤 수정건이 반영되었는지 확인
+
+6. commit (리포지토리에 변경내용 커밋)
+-- git commit -m "메세지(디스크립션 등)"
+
+/* ★ 배포 담당자가 따로 있는 경우 : 내가 작업한 브랜치를 배포담당자가 병합 
+7. push
+-- git push origin sss_test (리포지토리에 내가 생성한 브랜치 등록)
+
+8. merge request   
+-- 배포 담당자에게 내 브랜치를 머지해달라고 병합 요청 (github 홈페이지에서 적용)
+*/
+
+/* ★ 본인이 소스코드를 관리할경우
+7.PUSH
+-- git push origin main
+*/
+
+-- 기타
+-- 한글폴더명 깨짐 방어 
+-- git config --global core.quotepath false

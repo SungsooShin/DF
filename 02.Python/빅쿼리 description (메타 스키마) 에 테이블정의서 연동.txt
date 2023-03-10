@@ -1,0 +1,38 @@
+# 테이블정의서를 CSV로 업로드해서, Bigquery의 Description 정보 (콘솔화면의 변수 설명 정보) 일괄 기입하는 파이썬 코드 
+# (콘솔 이용하면 손으로 한땀 한땀 전부 넣어줘야함)
+
+
+#패키지 임포트 / 권한
+from google.cloud import bigquery
+import google.auth
+credentials, project_id = google.auth.load_credentials_from_file(filename = '~~~')
+import pandas as pd
+import time as time 
+
+#BQ 구성
+project = myproject
+dataset = mydataset
+bqpath = bigquery.DatasetReference(project, dataset)
+Client = bigquery.Client(project = project, credentials = credentials)
+
+#csv 호출 (테이블정의서)
+data = pd.read.csv('./update.csv', sep = '|')
+data = data[['DATA_SET_SEQ', 'CLMN_IDX', 'PHYS_TBL_NM', 'ATTR_NM', 'ATTR_PHYS_NM']]
+# 예시 >> [ '353 (데이터번호)' , '1 (칼럼순서)' , 'SSS_EFFORT_MMLY_S (테이블명)', '기준년월 (칼럼논리명)' , 'P_YYYYMM (칼럼물리명)' ]
+
+# 테이블물리명 Distinct화
+table_set = set(data["PHYS_TBL_NM"])
+
+#테이블정의서 -> BQ meta schema  description 이식 
+for tb_nm in table_set:
+	new_list = []
+	table_ref = bqpath.table(tb_nm)
+	schema = table.schema
+	loop_data = data[data["PHYS_TBL_NM"] == tb_nm]
+	loop_description = loop_data["ATTR_NM"].to_list()
+	for i in range(0,len(schema)):
+		schema_field = bigquery.SchemaField(schema[i].name, schema[i].field_type, schema[i].mode, loop_description[i]) #메타 ddl 생성 
+		new_list.append(schema_filed)
+	table.schema = new_list
+	client.update_table(table, ["schema"])
+	time.sleep(1) #타임 슬립 부여 (혹시모를 에러 대비)
